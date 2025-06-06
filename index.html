@@ -43,41 +43,54 @@
   <script>
     const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS0X5jNZplCBorHqj-SYDxBB4BPQzqefpraDdfI5wLDVBOyYQmR9zSz4aIHlZfM8q9uz2J9GZdv75r-/pub?output=csv';
 
+    function formatDateUK(date) {
+      const day = String(date.getDate()).padStart(2, '0');
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const year = date.getFullYear();
+      return `${day}/${month}/${year}`;
+    }
+
     async function loadMOTs() {
       const res = await fetch(csvUrl);
       const text = await res.text();
       const rows = text.split('\n').slice(1); // Skip header
 
       const today = new Date();
+      today.setHours(0, 0, 0, 0);
+
       const data = [];
 
       for (let row of rows) {
         const cols = row.split(',');
-
         if (cols.length < 2) continue;
 
         const reg = cols[0].trim();
         const motDueRaw = cols[1].trim();
-
         const motDate = new Date(motDueRaw);
+
         if (isNaN(motDate)) continue;
 
-        const daysLeft = (motDate - today) / (1000 * 60 * 60 * 24);
-        data.push({ reg, motDate, daysLeft });
+        motDate.setHours(0, 0, 0, 0);
+        if (motDate >= today) {
+          const daysLeft = (motDate - today) / (1000 * 60 * 60 * 24);
+          data.push({ reg, motDate, daysLeft });
+        }
       }
 
-      const sorted = data
+      const upcoming = data
         .sort((a, b) => a.motDate - b.motDate)
         .slice(0, 5);
 
       const tbody = document.querySelector('#motTable tbody');
-      sorted.forEach(item => {
+      tbody.innerHTML = '';
+
+      upcoming.forEach(item => {
         const tr = document.createElement('tr');
         if (item.daysLeft <= 30) tr.classList.add('due-soon');
 
         tr.innerHTML = `
           <td>${item.reg}</td>
-          <td>${item.motDate.toISOString().split('T')[0]}</td>
+          <td>${formatDateUK(item.motDate)}</td>
         `;
         tbody.appendChild(tr);
       });
