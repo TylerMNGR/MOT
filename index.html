@@ -1,114 +1,89 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Up & Coming MOT's</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    background: #f9f9f9;
-    padding: 20px;
-  }
-  .mot-box {
-    background-color: #ffeb3b; /* bright yellow */
-    border: 2px solid #fbc02d;
-    border-radius: 8px;
-    padding: 20px;
-    max-width: 400px;
-    margin: auto;
-    box-shadow: 0 0 10px rgba(243, 179, 0, 0.5);
-  }
-  .mot-title {
-    font-size: 1.5em;
-    font-weight: bold;
-    margin-bottom: 15px;
-    text-align: center;
-    color: #5d4037;
-    text-shadow: 1px 1px #fff8e1;
-  }
-  .mot-list {
-    list-style: none;
-    padding-left: 0;
-  }
-  .mot-list li {
-    padding: 8px 12px;
-    margin-bottom: 8px;
-    background: #fff176;
-    border-radius: 5px;
-    box-shadow: inset 0 0 3px #fbc02d;
-    display: flex;
-    justify-content: space-between;
-    font-weight: 600;
-    color: #3e2723;
-  }
-  .mot-list li:nth-child(odd) {
-    background: #fff59d;
-  }
-  .mot-list .no-mot {
-    font-style: italic;
-    color: #6d4c41;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <title>Next 5 MOTs Due</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      background: #f4f4f4;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: #fff;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #eee;
+    }
+    .due-soon {
+      background-color: #ffcccc;
+    }
+  </style>
 </head>
 <body>
+  <h1>Next 5 MOTs Due</h1>
+  <table id="motTable">
+    <thead>
+      <tr>
+        <th>Registration</th>
+        <th>MOT Due Date</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
 
-<div class="mot-box">
-  <div class="mot-title">Up &amp; Coming MOT's</div>
-  <ul id="motList" class="mot-list">
-    <li>Loading MOT data...</li>
-  </ul>
-</div>
+  <script>
+    const csvUrl = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vS0X5jNZplCBorHqj-SYDxBB4BPQzqefpraDdfI5wLDVBOyYQmR9zSz4aIHlZfM8q9uz2J9GZdv75r-/pub?output=csv';
 
-<script>
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbzw4mhP2EyJ6e-oB2aHf6qkzqLrlMMwsnph26HpmhfjzmA4htYK6HPxg_WgL5HFRxi9/exec";
+    async function loadMOTs() {
+      const res = await fetch(csvUrl);
+      const text = await res.text();
+      const rows = text.split('\n').slice(1); // Skip header
 
-  async function fetchMOTs() {
-    try {
-      const response = await fetch(WEB_APP_URL);
-      if (!response.ok) throw new Error("Network response not ok");
+      const today = new Date();
+      const data = [];
 
-      const mots = await response.json();
+      for (let row of rows) {
+        const cols = row.split(',');
 
-      const motList = document.getElementById("motList");
-      motList.innerHTML = "";
+        if (cols.length < 2) continue;
 
-      // Show minimum 5 items
-      const minCount = 5;
-      const count = Math.max(minCount, mots.length);
+        const reg = cols[0].trim();
+        const motDueRaw = cols[1].trim();
 
-      if (mots.length === 0) {
-        for (let i = 0; i < minCount; i++) {
-          motList.innerHTML += `<li class="no-mot">No MOT found</li>`;
-        }
-        return;
+        const motDate = new Date(motDueRaw);
+        if (isNaN(motDate)) continue;
+
+        const daysLeft = (motDate - today) / (1000 * 60 * 60 * 24);
+        data.push({ reg, motDate, daysLeft });
       }
 
-      for (let i = 0; i < count; i++) {
-        if (i < mots.length) {
-          const mot = mots[i];
-          motList.innerHTML += `
-            <li>
-              <span>${mot.reg}</span>
-              <span>${mot.days}</span>
-            </li>`;
-        } else {
-          motList.innerHTML += `<li class="no-mot">No MOT found</li>`;
-        }
-      }
-    } catch (err) {
-      const motList = document.getElementById("motList");
-      motList.innerHTML = `<li class="no-mot">Failed to load MOT data</li>`;
-      console.error("Error fetching MOTs:", err);
+      const sorted = data
+        .sort((a, b) => a.motDate - b.motDate)
+        .slice(0, 5);
+
+      const tbody = document.querySelector('#motTable tbody');
+      sorted.forEach(item => {
+        const tr = document.createElement('tr');
+        if (item.daysLeft <= 30) tr.classList.add('due-soon');
+
+        tr.innerHTML = `
+          <td>${item.reg}</td>
+          <td>${item.motDate.toISOString().split('T')[0]}</td>
+        `;
+        tbody.appendChild(tr);
+      });
     }
-  }
 
-  // Fetch MOTs on page load
-  fetchMOTs();
-
-  // Optional: auto refresh every 24 hours (86400000 ms)
-  // setInterval(fetchMOTs, 86400000);
-</script>
-
+    loadMOTs();
+  </script>
 </body>
 </html>
