@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Up & Coming MOTs</title>
+  <style>
+    body {
+      background-color: #001f73;
+      color: black;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .mot-box {
+      background-color: #ffeb3b;
+      border-radius: 12px;
+      padding: 20px;
+      max-width: 400px;
+      margin: 0 auto;
+      text-align: left;
+      box-shadow: 0 0 15px #00000080;
+    }
+
+    .mot-box h2 {
+      text-align: center;
+      font-size: 1.6em;
+      margin-bottom: 15px;
+      color: #000;
+    }
+
+    .mot-entry {
+      padding: 10px 0;
+      border-bottom: 1px solid #00000030;
+    }
+
+    .mot-entry:last-child {
+      border-bottom: none;
+    }
+
+    .reg {
+      font-weight: bold;
+      font-size: 1.1em;
+      color: #000;
+    }
+
+    .expiry {
+      color: #333;
+      float: right;
+    }
+
+    .countdown {
+      color: red;
+      font-size: 0.9em;
+      margin-top: 4px;
+      display: block;
+    }
+
+    #mot-list {
+      min-height: 120px;
+    }
+  </style>
+</head>
+<body>
+  <div class="mot-box">
+    <h2>Up & Coming MOTs</h2>
+    <div id="mot-list">Loading...</div>
+  </div>
+
+  <script>
+    const MOT_ENDPOINT = "https://script.google.com/macros/s/AKfycbzw4mhP2EyJ6e-oB2aHf6qkzqLrlMMwsnph26HpmhfjzmA4htYK6HPxg_WgL5HFRxi9/exec";
+
+    fetch(MOT_ENDPOINT)
+      .then(res => res.json())
+      .then(data => {
+        const container = document.getElementById('mot-list');
+        container.innerHTML = '';
+
+        // Sort by soonest first
+        data.sort((a, b) => {
+          const aDays = parseInt(a.days);
+          const bDays = parseInt(b.days);
+          return aDays - bDays;
+        });
+
+        // Always show at least 5 items
+        const fullList = data.length >= 5 ? data.slice(0, 5) : data;
+
+        if (fullList.length === 0) {
+          container.innerHTML = '<div>No MOTs found.</div>';
+          return;
+        }
+
+        fullList.forEach(item => {
+          const div = document.createElement('div');
+          div.className = 'mot-entry';
+          div.innerHTML = `
+            <span class="reg">${item.reg}</span>
+            <span class="expiry">${item.expiry}</span>
+            <span class="countdown">${item.days}</span>
+          `;
+          container.appendChild(div);
+        });
+      })
+      .catch(err => {
+        document.getElementById('mot-list').innerText = 'Failed to load MOT data.';
+        console.error(err);
+      });
+  </script>
+</body>
+</html>
